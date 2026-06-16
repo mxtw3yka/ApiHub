@@ -1,7 +1,23 @@
 /*
 !/app
 !/alembic.ini
+!/docker-compose.yml
+!/docker-entrypoint.sh
+!/Dockerfile
 !/pyproject.toml
 !/uv.lock
 !/README.md
-!.gitignore
+!/.gitignore
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv
+.tests
+
+# Environment files
+app/.env
