@@ -3,4 +3,5 @@
 !/alembic.ini
 !/pyproject.toml
 !/uv.lock
+!/README.md
 !.gitignore
