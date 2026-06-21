@@ -1,0 +1,22 @@
+name: API Contract Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
+
+jobs:
+  push-spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push OpenAPI spec
+        uses: ./.github/actions/push
+        with:
+          spec_path: api-contract-spec.yaml
+          service: API Contract Platform
+          server: ${{ secrets.API_CONTRACT_SERVER }}

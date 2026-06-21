@@ -17,6 +17,24 @@ class CheckService:
         self.dependency_service = dependency_service
         self.session = session
 
+    async def list_checks(self, limit: int = 20) -> list[CheckResponse]:
+        query = select(Check).order_by(Check.created_at.desc()).limit(limit)
+        result = await self.session.execute(query)
+        checks = result.scalars().all()
+        return [
+            CheckResponse(
+                id=c.id,
+                status=c.status,
+                result=CheckResult(
+                    compatible=c.result['compatible'],
+                    changes=[Change(**ch) for ch in c.result['changes']],
+                    affected_consumers=[ServiceBrief(**s) for s in c.result.get('affected_consumers', [])],
+                ) if c.result else None,
+                created_at=c.created_at,
+            )
+            for c in checks
+        ]
+
     async def run_check(self, service_id: UUID, version: str) -> UUID:
         start = time.monotonic()
         result = await self.session.execute(select(Schema).where(Schema.service_id == service_id, Schema.version == version))

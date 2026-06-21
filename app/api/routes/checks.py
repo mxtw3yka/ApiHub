@@ -9,6 +9,20 @@ from app.core.cache import get_cache, set_cache, invalidate_cache
 router = APIRouter(tags=["Checks"])
 
 
+@router.get("/check", response_model=list[CheckResponse])
+async def list_checks(
+    limit: int = 20,
+    service: CheckService = Depends(get_check_service),
+):
+    key = f"checks:list:limit={limit}"
+    cached = await get_cache(key)
+    if cached:
+        return [CheckResponse(**c) for c in cached]
+    result = await service.list_checks(limit=limit)
+    await set_cache(key, [r.model_dump(mode="json") for r in result])
+    return result
+
+
 @router.post("/check", response_model=RunCheckResponse, status_code=status.HTTP_202_ACCEPTED)
 async def run_check(
     data: RunCheckRequest,

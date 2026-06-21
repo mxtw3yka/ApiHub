@@ -27,19 +27,45 @@ app/
 ## Быстрый старт
 
 ```bash
-# Зависимости
+# Зависимости (Python)
 uv sync
 
 # Настройки
 cp app/.env-example app/.env
 # заполнить DB_URL, GITHUB_TOKEN и т.д.
 
+# Фронтенд (Vite + React + React Flow)
+cd frontend && npm install && cd ..
+
+# Активация pre-commit hook (проверка API-контрактов перед коммитом)
+./setup.sh
+
 # Миграции
 alembic upgrade head
 
-# Запуск
+# Запуск (Python сервер + React фронтенд)
 uv run uvicorn app.main:app --reload
 ```
+
+### Фронтенд
+
+Стек: Vite + React + TypeScript + React Flow (граф зависимостей) + React Bits (анимации).
+
+Фичи:
+- **Стеклянная тема** (glassmorphism) с blur-эффектами и адаптивной цветовой схемой
+- **Граф зависимостей** с белыми нитевидными рёбрами (bezier + glow), перетаскиванием нод и dagre-раскладкой
+- **Анимации**: fade-in при скролле (ScrollTrigger), glow-эффекты на карточках статистики, анимированные счётчики
+- **Панели деталей** сервиса и контракта с side-by-side сравнением типов
+
+```bash
+# Разработка — Vite dev server с прокси на /api
+cd frontend && npm run dev
+
+# Сборка — результат в app/static/
+cd frontend && npm run build
+```
+
+При `docker compose up -d` фронтенд собирается и встраивается в образ автоматически (multi-stage Dockerfile).
 
 ## CLI (`api-contract`)
 
@@ -99,6 +125,84 @@ uv run api-contract ps
 |------|-------------|----------|
 | `--server` | `http://localhost:8000` | URL платформы |
 | `--html` | — | Сохранить результат в HTML-отчёт |
+
+## Демо-стенд
+
+Три mock-сервиса на разных портах — каждый имитирует свой фреймворк и свой автодетект-путь.
+
+```bash
+# Запуск моков
+cd demo && docker compose up -d
+
+# Пуш всех трёх спецификаций
+bash demo/push-all.sh
+
+# Остановка
+cd demo && docker compose down
+```
+
+| Сервис | Порт | Путь автодетекта | Язык (имитация) |
+|--------|------|-----------------|-----------------|
+| `demo-python-petstore` | 8001 | `/openapi.json` | FastAPI |
+| `demo-java-orders` | 8002 | `/v3/api-docs` | Spring Boot 3 |
+| `demo-go-users` | 8003 | `/swagger/doc.json` | Gin (Go) |
+
+Каждый сервис — отдельный OpenAPI-спек с разными эндпоинтами. При первом запуске все три попадут на платформу. Повторный `push-all.sh` покажет breaking changes (версии уже зафиксированы).
+
+## GitHub Action
+
+Push OpenAPI spec automatically on every push:
+
+```yaml
+# .github/workflows/api-contract-push.yml
+name: API Contract Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/*.json'
+
+jobs:
+  push-spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Push OpenAPI spec
+        uses: ./.github/actions/push
+        with:
+          spec_path: api-contract-spec.yaml
+          service: API Contract Platform
+          server: ${{ secrets.API_CONTRACT_SERVER }}
+```
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `spec_path` | ✅ | — | Path to OpenAPI spec file or URL |
+| `service` | ✅ | — | Service name on the platform |
+| `server` | — | `http://localhost:8000` | Platform server URL |
+| `version` | — | info.version | Spec version override |
+| `headers` | — | `{}` | JSON object of HTTP headers |
+| `html_path` | — | — | Path to save HTML report |
+
+### Secrets
+
+Set `API_CONTRACT_SERVER` in your repo → Settings → Secrets and variables → Actions.
+
+For authenticated endpoints:
+
+```yaml
+- uses: ./.github/actions/push
+  with:
+    spec_path: http://service:8000
+    service: my-service
+    headers: '{"Authorization": "Bearer ${{ secrets.API_TOKEN }}"}'
+```
 
 ## API
 

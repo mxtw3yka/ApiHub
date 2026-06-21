@@ -5,7 +5,11 @@ COMMON_PATHS = [
     "/openapi.json",
     "/openapi.yaml",
     "/v3/api-docs",
+    "/v2/api-docs",
     "/swagger/v1/swagger.json",
+    "/swagger/doc.json",
+    "/api-docs",
+    "/api/swagger.json",
 ]
 
 

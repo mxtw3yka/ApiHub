@@ -83,6 +83,15 @@ class SchemaService:
             size=size,
         )
 
+    async def get_latest_schema(self, service_id: UUID) -> SchemaResponse | None:
+        query = (select(Schema).where(Schema.service_id == service_id).order_by(Schema.created_at.desc()).limit(1))
+        result = await self.session.execute(query)
+        schema = result.scalar_one_or_none()
+        if not schema:
+            return None
+        service_name = await _get_service_name(self.session, service_id)
+        return _to_schema_response(schema, service_name)
+
     async def get_previous_version(self, service_id: UUID, version: str) -> Schema | None:
         query = (select(Schema).where(Schema.service_id == service_id, Schema.version < version).order_by(Schema.created_at.desc()).limit(1))
         result = await self.session.execute(query)

@@ -81,7 +81,9 @@ def main():
         else:
             spec = read_spec(args.spec_file)
         version = args.version or spec.get("info", {}).get("version", "0.0.0")
-        handle_push(spec, args.service, version, args.server, html_path=args.html)
+        ok = handle_push(spec, args.service, version, args.server, html_path=args.html)
+        if not ok:
+            sys.exit(1)
 
     elif args.command == 'ps':
         handle_ps(args.server)

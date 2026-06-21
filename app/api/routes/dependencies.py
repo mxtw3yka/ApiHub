@@ -2,13 +2,15 @@
 from fastapi import APIRouter, Depends, status
 from uuid import UUID
 from app.services.dependency_service import DependencyService
+from app.services.contract_service import ContractService
 from app.domain.dto.common import (
     CreateDependencyRequest,
     DependencyResponse,
     DependencyGraphResponse,
     ServiceBrief,
+    ContractResponse,
 )
-from app.api.deps import get_dependency_service
+from app.api.deps import get_dependency_service, get_contract_service
 from app.core.cache import get_cache, set_cache, invalidate_cache
 
 router = APIRouter(prefix="/dependencies", tags=["Dependencies"])
@@ -81,3 +83,12 @@ async def delete_dependency(
 ):
     await service.delete_dependency(dependency_id)
     await invalidate_cache("dependencies")
+
+
+@router.get("/{dependency_id}/contract", response_model=ContractResponse)
+async def get_contract(
+    dependency_id: UUID,
+    service: ContractService = Depends(get_contract_service),
+):
+    """Сравнение контракта provider/consumer для зависимости."""
+    return await service.get_contract(dependency_id)
