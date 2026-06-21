@@ -89,3 +89,52 @@ class DiffResponse(BaseDTO):
     compatible: bool
     changes: list[Change]
 
+class FieldType(BaseDTO):
+    type: str
+    format: str | None = None
+    required: bool = False
+    description: str | None = None
+    enumValues: list[str] | None = None
+    refType: str | None = None
+
+class ContractParam(BaseDTO):
+    name: str
+    param_in: str = ''
+    provider_type: str | None = None
+    provider_format: str | None = None
+    provider_required: bool = False
+    consumer_type: str | None = None
+    consumer_format: str | None = None
+    consumer_required: bool = False
+
+class ContractField(BaseDTO):
+    name: str
+    provider_type: str | None = None
+    provider_format: str | None = None
+    provider_required: bool = False
+    consumer_type: str | None = None
+    consumer_format: str | None = None
+    consumer_required: bool = False
+
+class ContractError(BaseDTO):
+    code: str
+    provider_description: str = ''
+    consumer_description: str = ''
+
+class ContractEndpoint(BaseDTO):
+    method: str
+    path: str
+    summary: str = ''
+    parameters: list[ContractParam] = []
+    request_body_fields: list[ContractField] = []
+    response_body_fields: list[ContractField] = []
+    response_status_code: str = ''
+    error_codes: list[ContractError] = []
+
+class ContractResponse(BaseDTO):
+    consumer_id: str
+    consumer_name: str = ''
+    provider_id: str
+    provider_name: str = ''
+    endpoints: list[ContractEndpoint] = []
+

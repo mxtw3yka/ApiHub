@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+CONFIG=".api-contract-hook.yaml"
+
+if [ ! -f "$CONFIG" ]; then
+    exit 0
+
+fi 
+
+if [ "$ALLOW_BREAKING" = "1" ]; then
+    echo "⚠️  ALLOW_BREAKING=1 — skipping API contract check"
+    exit 0
+fi
+
+SERVER=$(grep '^server:' "$CONFIG" | sed 's/^server: *//' | xargs)
+SPEC=$(grep '^spec_path:' "$CONFIG" | sed 's/^spec_path: *//' | xargs)
+SERVICE=$(grep '^service:' "$CONFIG" | sed 's/^service: *//' | xargs)
+
+if ! git diff --cached --name-only | grep -Fqx "$SPEC"; then
+    exit 0
+fi
+
+echo "🔍 Checking API contract: $SERVICE ($SPEC)"
+if ! uv run api-contract push "$SPEC" --service "$SERVICE" --server "$SERVER"; then
+    echo "❌ Breaking changes detected. Commit aborted."
+    echo "   To force: ALLOW_BREAKING=1 git commit"
+    exit 1
+fi
+
+echo "✅ API contract check passed"
+exit 0

@@ -1,0 +1,81 @@
+name: 'API Contract Push'
+description: 'Push OpenAPI spec to API Contract Platform for compatibility checking'
+branding:
+  icon: 'activity'
+  color: 'blue'
+
+inputs:
+  spec_path:
+    description: 'Path to OpenAPI spec file (e.g., openapi.yaml) or URL (e.g., http://service:8000)'
+    required: true
+  service:
+    description: 'Service name to register on the platform'
+    required: true
+  server:
+    description: 'API Contract Platform server URL'
+    required: false
+    default: 'http://localhost:8000'
+  version:
+    description: 'Spec version (default: from spec info.version)'
+    required: false
+  headers:
+    description: 'JSON object of HTTP headers (e.g., {"Authorization": "Bearer ${{ secrets.TOKEN }}"})'
+    required: false
+    default: '{}'
+  html_path:
+    description: 'Path to save HTML report (relative to workspace)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      shell: bash
+      run: pip install uv
+
+    - name: Install api-contract
+      shell: bash
+      run: uv sync --frozen --no-dev
+
+    - name: Push spec to platform
+      shell: bash
+      env:
+        INPUT_SPEC_PATH: ${{ inputs.spec_path }}
+        INPUT_SERVICE: ${{ inputs.service }}
+        INPUT_SERVER: ${{ inputs.server }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_HTML_PATH: ${{ inputs.html_path }}
+        INPUT_HEADERS: ${{ inputs.headers }}
+      run: |
+        python3 << 'PYEOF'
+        import sys, json, subprocess, os
+
+        args = [
+            'uv', 'run', 'api-contract', 'push',
+            os.environ['INPUT_SPEC_PATH'],
+            '--service', os.environ['INPUT_SERVICE'],
+            '--server', os.environ['INPUT_SERVER'],
+        ]
+
+        v = os.environ.get('INPUT_VERSION', '').strip()
+        if v:
+            args += ['--version', v]
+
+        h = os.environ.get('INPUT_HTML_PATH', '').strip()
+        if h:
+            args += ['--html', h]
+
+        headers = os.environ.get('INPUT_HEADERS', '{}')
+        if headers.strip():
+            try:
+                for k, v in json.loads(headers).items():
+                    args += ['--header', f'{k}: {v}']
+            except json.JSONDecodeError:
+                pass
+
+        sys.exit(subprocess.run(args).returncode)
+        PYEOF

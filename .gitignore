@@ -8,6 +8,13 @@
 !/uv.lock
 !/README.md
 !/.gitignore
+!.githooks/
+!.githooks/**
+!/setup.sh
+!/.github/
+!/.github/**
+!/frontend/
+!/frontend/**
 
 # Python-generated files
 __pycache__/

@@ -29,11 +29,24 @@ def handle_check(
         result = resp.json()
 
     data = result["result"]
-    changes = data["changes"]
+    changes_raw = data["changes"]
     compatible = data["compatible"]
     consumers = data["affected_consumers"]
 
-    print_changes(changes)
+    change_objects = [
+        Change(
+            category=ChangeCategory(c["category"]),
+            severity=Severity(c["severity"]),
+            path=c["path"],
+            description=c["description"],
+            old_value=c.get("old_value", ""),
+            new_value=c.get("new_value", ""),
+            recommendation=c.get("recommendation", ""),
+        )
+        for c in changes_raw
+    ]
+
+    print_changes(change_objects)
 
     if consumers:
         print(f"📢 Affected consumers ({len(consumers)}):")
@@ -41,18 +54,6 @@ def handle_check(
             print(f"   • {c['name']}")
 
     if html_path:
-        change_objects = [
-            Change(
-                category=ChangeCategory(c["category"]),
-                severity=Severity(c["severity"]),
-                path=c["path"],
-                description=c["description"],
-                old_value=c.get("old_value", ""),
-                new_value=c.get("new_value", ""),
-                recommendation=c.get("recommendation", ""),
-            )
-            for c in changes
-        ]
         consumer_info = [ConsumerInfo(id=c["id"], name=c["name"]) for c in consumers]
         report_data = ReportData(
             service_name=service_id,
