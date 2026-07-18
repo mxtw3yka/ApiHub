@@ -66,6 +66,36 @@ class DiffService:
             for path, details in items.items():
                 human = _humanize_path(path)
 
+                # OpenAPI хранит `required` и `enum` как массивы, поэтому DeepDiff
+                # репортит изменения в них как iterable_item_*, а не values_changed.
+                # Эти ветки ловят два классических breaking change, которые иначе
+                # проходят мимо: появление нового обязательного поля и удаление
+                # допустимого значения из enum.
+                if category in ('iterable_item_added', 'iterable_item_removed'):
+                    value = str(details)
+                    if "['required']" in path and category == 'iterable_item_added':
+                        changes.append(Change(
+                            category=ChangeCategory.required_added,
+                            severity=Severity.critical,
+                            path=path,
+                            description=f"{human} → field '{value}' is now required",
+                            old_value='',
+                            new_value=value,
+                            recommendation='Notify consumers about this change',
+                        ))
+                    elif "['enum']" in path and category == 'iterable_item_removed':
+                        changes.append(Change(
+                            category=ChangeCategory.enum_value_removed,
+                            severity=Severity.critical,
+                            path=path,
+                            description=f"{human} value '{value}' was removed",
+                            old_value=value,
+                            new_value='',
+                            recommendation='Notify consumers about this change',
+                        ))
+                    # remove from required / add to enum ослабляют контракт — не breaking
+                    continue
+
                 if 'paths' in path:
                     if category == 'dictionary_item_removed':
                         change_category = ChangeCategory.endpoint_removed
@@ -79,8 +109,6 @@ class DiffService:
                     change_category = ChangeCategory.field_removed
                 elif 'properties' in path and category == 'dictionary_item_added':
                     change_category = ChangeCategory.field_added
-                elif 'required' in path and category == 'values_changed':
-                    change_category = ChangeCategory.required_added
                 elif 'format' in path and category == 'values_changed':
                     change_category = ChangeCategory.format_changed
                 elif 'nullable' in path and category == 'values_changed':
